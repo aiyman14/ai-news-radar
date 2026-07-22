@@ -1,0 +1,32 @@
+[
+  {
+    "id": "meta-llama/Llama-4",
+    "likes": 12500,
+    "downloads": 4800000,
+    "trendingScore": 312,
+    "pipeline_tag": "text-generation",
+    "createdAt": "2026-06-30T15:00:00.000Z",
+    "private": false,
+    "tags": ["transformers", "safetensors", "llama"]
+  },
+  {
+    "id": "black-forest-labs/FLUX.2-dev",
+    "likes": 9800,
+    "downloads": 2100000,
+    "trendingScore": 250,
+    "pipeline_tag": "text-to-image",
+    "createdAt": "2026-07-01T08:30:00.000Z",
+    "private": false
+  },
+  {
+    "id": "tiny-org/no-metrics-model",
+    "pipeline_tag": null,
+    "private": false
+  },
+  {
+    "likes": 5,
+    "downloads": 10,
+    "trendingScore": 1,
+    "note": "entry with no id must be skipped"
+  }
+]

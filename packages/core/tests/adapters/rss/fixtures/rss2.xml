@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:content="http://purl.org/rss/1.0/modules/content/" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:media="http://search.yahoo.com/mrss/">
+  <channel>
+    <title>Example AI Newsroom</title>
+    <link>https://example.com/news</link>
+    <description>Fixture RSS 2.0 feed</description>
+    <item>
+      <title>OpenAI ships GPT-6 with sharper reasoning &amp; lower prices</title>
+      <link>https://example.com/news/gpt-6</link>
+      <guid isPermaLink="false">news-gpt-6-001</guid>
+      <description><![CDATA[<p>OpenAI today <strong>released</strong> GPT-6, a frontier model focused on agentic reasoning.</p>]]></description>
+      <content:encoded><![CDATA[<article><p>OpenAI today released GPT-6.</p><p>Full body here.</p></article>]]></content:encoded>
+      <dc:creator>Fixture Reporter</dc:creator>
+      <pubDate>Mon, 06 Jul 2026 09:30:00 GMT</pubDate>
+      <enclosure url="https://example.com/img/gpt-6-hero.jpg" type="image/jpeg" length="12345"/>
+    </item>
+    <item>
+      <title>Weekly roundup: local inference on a potato</title>
+      <link>https://example.com/news/roundup-27</link>
+      <guid>https://example.com/news/roundup-27</guid>
+      <description>Plain-text summary of the week in local LLM inference.</description>
+      <author>editor@example.com (Roundup Editor)</author>
+      <pubDate>Sun, 05 Jul 2026 18:00:00 GMT</pubDate>
+      <media:content url="https://example.com/img/roundup-27.png" medium="image" width="600"/>
+    </item>
+    <item>
+      <title>Podcast episode 42</title>
+      <link>https://example.com/podcast/42</link>
+      <guid isPermaLink="false">podcast-42</guid>
+      <description>Audio enclosure must NOT be picked up as an image.</description>
+      <pubDate>not a real date</pubDate>
+      <enclosure url="https://example.com/audio/ep42.mp3" type="audio/mpeg" length="99999"/>
+    </item>
+  </channel>
+</rss>

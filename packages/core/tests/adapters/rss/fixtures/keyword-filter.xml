@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>Product Hunt — Global (fixture)</title>
+  <id>tag:producthunt.example,2026:feed</id>
+  <updated>2026-07-06T12:00:00Z</updated>
+  <entry>
+    <id>tag:producthunt.example,2026:post-1</id>
+    <title>PromptPilot — an AI copilot for your prompts</title>
+    <link rel="alternate" href="https://producthunt.example/posts/promptpilot"/>
+    <published>2026-07-06T07:00:00Z</published>
+    <content type="html">&lt;p&gt;Build better LLM prompts with an agentic assistant.&lt;/p&gt;</content>
+  </entry>
+  <entry>
+    <id>tag:producthunt.example,2026:post-2</id>
+    <title>SockMatcher — never lose a sock again</title>
+    <link rel="alternate" href="https://producthunt.example/posts/sockmatcher"/>
+    <published>2026-07-06T06:30:00Z</published>
+    <content type="html">&lt;p&gt;A smart drawer organizer for your laundry room.&lt;/p&gt;</content>
+  </entry>
+  <entry>
+    <id>tag:producthunt.example,2026:post-3</id>
+    <title>QuietDesk — a focus timer</title>
+    <link rel="alternate" href="https://producthunt.example/posts/quietdesk"/>
+    <published>2026-07-06T05:00:00Z</published>
+    <content type="html">&lt;p&gt;Uses machine learning to schedule your deep-work blocks.&lt;/p&gt;</content>
+  </entry>
+</feed>

@@ -1,0 +1,18 @@
+[
+  {
+    "id": "enzostvs/deepsite",
+    "likes": 4200,
+    "trendingScore": 180,
+    "sdk": "docker",
+    "createdAt": "2026-05-12T10:00:00.000Z",
+    "private": false
+  },
+  {
+    "id": "multimodalart/flux-2-lora-lab",
+    "likes": 950,
+    "trendingScore": 96,
+    "sdk": "gradio",
+    "createdAt": "2026-07-02T19:45:00.000Z",
+    "private": false
+  }
+]

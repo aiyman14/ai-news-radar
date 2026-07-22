@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>No-guid fixture</title>
+    <link>https://example.net</link>
+    <description>Items exercising the externalId fallback chain</description>
+    <item>
+      <title>Item with link but no guid</title>
+      <link>https://example.net/posts/no-guid</link>
+      <description>Falls back to the canonical URL.</description>
+    </item>
+    <item>
+      <title>Item with neither guid nor link</title>
+      <description>Falls back to the content hash.</description>
+    </item>
+  </channel>
+</rss>

@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xmlns:media="http://search.yahoo.com/mrss/">
+  <title>Example Atom Feed</title>
+  <id>tag:example.org,2026:feed</id>
+  <updated>2026-07-06T10:00:00Z</updated>
+  <entry>
+    <id>tag:example.org,2026:entry-001</id>
+    <title>Anthropic introduces Claude agents for the enterprise</title>
+    <link rel="self" href="https://example.org/entries/001.atom"/>
+    <link rel="alternate" type="text/html" href="https://example.org/posts/claude-agents"/>
+    <published>2026-07-06T08:15:00Z</published>
+    <updated>2026-07-06T09:00:00Z</updated>
+    <author><name>Atom Author</name></author>
+    <summary>Claude gets first-class agentic tooling.</summary>
+    <content type="html">&lt;p&gt;Anthropic today &lt;em&gt;introduced&lt;/em&gt; enterprise agents built on Claude.&lt;/p&gt;</content>
+    <media:thumbnail url="https://example.org/img/claude-agents-thumb.png"/>
+  </entry>
+  <entry>
+    <id>tag:example.org,2026:entry-002</id>
+    <title>Minimal entry with only updated date</title>
+    <link href="https://example.org/posts/minimal"/>
+    <updated>2026-07-05T22:45:00Z</updated>
+    <content type="text">Plain text content, no summary, no image.</content>
+  </entry>
+</feed>
