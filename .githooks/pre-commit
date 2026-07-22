@@ -1,0 +1,15 @@
+#!/bin/sh
+# Optional local secret-scan gate.
+# Enable per-clone with:  git config core.hooksPath .githooks
+# Runs gitleaks on staged changes when the binary is installed; otherwise
+# passes silently (CI runs the authoritative scan on every push).
+
+if command -v gitleaks >/dev/null 2>&1; then
+  gitleaks protect --staged || {
+    echo ""
+    echo "gitleaks flagged a potential secret in your staged changes."
+    echo "   If it's real: unstage it, rotate the secret, and use .env instead."
+    exit 1
+  }
+fi
+exit 0

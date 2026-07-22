@@ -1,0 +1,61 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Least-privilege: nothing here writes to the repo.
+# pull-requests:read is required by gitleaks-action on pull_request events —
+# it enumerates PR commits via the API, and a permissions block sets every
+# unlisted scope to NONE (which would 403 that call).
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: pnpm/action-setup@v6 # reads packageManager from package.json
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        run: pnpm -r typecheck
+
+      - name: Tests
+        run: pnpm -r test
+
+      - name: Web build
+        run: pnpm --filter @radar/web build
+        env:
+          # Build-time placeholders: every page is server-rendered on demand,
+          # so no query runs at build; real values come from the host's env.
+          NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:54321
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: build-placeholder-anon-key
+
+  secret-scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0 # full history so gitleaks scans every commit
+
+      - name: gitleaks
+        uses: gitleaks/gitleaks-action@v3
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # PR comments would need pull-requests:WRITE — keep least-privilege
+          # (read) and disable comments; findings still fail the job/log.
+          GITLEAKS_ENABLE_COMMENTS: false
