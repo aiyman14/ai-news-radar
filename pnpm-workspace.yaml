@@ -1,0 +1,10 @@
+packages:
+  - "apps/*"
+  - "packages/*"
+
+# pnpm v10 blocks dependency postinstall scripts unless approved.
+# The supabase CLI package downloads its binary in postinstall.
+onlyBuiltDependencies:
+  - supabase
+  - esbuild
+  - sharp
