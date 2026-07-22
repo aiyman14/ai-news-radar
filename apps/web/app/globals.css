@@ -1,0 +1,53 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/**
+ * Design tokens. Single dark theme, one accent.
+ * The future design pass edits THESE VALUES — components reference tokens
+ * only (via the Tailwind mapping in tailwind.config.ts), never raw colors.
+ * Values are space-separated RGB channels so Tailwind alpha modifiers work
+ * (e.g. bg-kind-news/10 → rgb(var(--kind-news) / 0.1)).
+ */
+:root {
+  color-scheme: dark;
+
+  /* surfaces */
+  --bg: 12 13 17; /* page background */
+  --surface: 20 22 28; /* cards, header */
+  --surface-2: 28 31 40; /* raised: chips, inputs, hover */
+  --border: 42 46 58;
+
+  /* text */
+  --fg: 228 231 238;
+  --muted: 150 158 176;
+  --faint: 102 109 126;
+
+  /* the one accent */
+  --accent: 124 141 250;
+
+  /* kind color map — all 7 item kinds (chips, tabs, category badges) */
+  --kind-news: 96 165 250;
+  --kind-launch: 167 139 250;
+  --kind-tool: 52 211 153;
+  --kind-tip: 251 191 36;
+  --kind-discussion: 244 114 182;
+  --kind-research: 34 211 238;
+  --kind-opinion: 251 146 60;
+}
+
+@layer base {
+  body {
+    @apply bg-bg text-fg antialiased;
+  }
+
+  ::selection {
+    background: rgb(var(--accent) / 0.35);
+  }
+}
+
+/* Visited-link dimming for item titles — :visited can't be styled
+   via Tailwind utilities, so one token-driven rule here. */
+a.item-title:visited {
+  color: rgb(var(--faint));
+}
