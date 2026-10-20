@@ -242,3 +242,36 @@ describe("rssAdapter — expected failures return err(FetchError), never throw",
     expect(spy).not.toHaveBeenCalled();
   });
 });
+
+describe("rssAdapter — blocked host short-circuit", () => {
+  it("after a 403 from a paced host, later feeds on that host fail fast without another request", async () => {
+    const { resetHostStateForTests } = await import("../../../src/adapters/rss");
+    resetHostStateForTests();
+    const spy = stubFetch("<html>Blocked</html>", { status: 403, statusText: "Blocked" });
+
+    const first = await rssAdapter.fetch(
+      source({ slug: "reddit-a", url: "https://www.reddit.com/r/A/top/.rss" }),
+      ctx,
+    );
+    expect(first.ok).toBe(false);
+    if (first.ok) throw new Error("unreachable");
+    expect(first.error).toBeInstanceOf(FetchError);
+    expect(first.error.message).toContain("403");
+
+    const second = await rssAdapter.fetch(
+      source({ slug: "reddit-b", url: "https://www.reddit.com/r/B/top/.rss" }),
+      ctx,
+    );
+    expect(second.ok).toBe(false);
+    if (second.ok) throw new Error("unreachable");
+    expect(second.error.message).toContain("skipped");
+    // Only the first feed hit the network; the second never waited out pacing.
+    expect(spy).toHaveBeenCalledTimes(1);
+
+    // Unpaced hosts are never marked blocked.
+    const other = await rssAdapter.fetch(source({ url: "https://feeds.example.com/x.xml" }), ctx);
+    expect(other.ok).toBe(false);
+    expect(spy).toHaveBeenCalledTimes(2);
+    resetHostStateForTests();
+  });
+});

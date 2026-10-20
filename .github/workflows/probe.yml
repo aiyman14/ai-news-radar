@@ -4,6 +4,15 @@ name: probe
 # and with which User-Agent. Prints one status line per target; nothing else.
 on:
   workflow_dispatch:
+    inputs:
+      urls:
+        description: "Feed URLs to probe (space/comma separated); empty = built-in targets"
+        required: false
+        default: ""
+      ua:
+        description: "User-Agent: radar | browser"
+        required: false
+        default: "radar"
 
 permissions:
   contents: read
@@ -22,3 +31,6 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - name: Probe sources
         run: pnpm --filter @radar/ingest exec tsx src/probe.ts
+        env:
+          PROBE_URLS: ${{ inputs.urls }}
+          PROBE_UA: ${{ inputs.ua }}

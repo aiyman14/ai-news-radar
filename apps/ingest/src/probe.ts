@@ -3,7 +3,8 @@
  * Fetches a few URL × User-Agent variants and prints the HTTP status for
  * each, so a GitHub Actions run (.github/workflows/probe.yml) can show
  * which hosts block the runner's IP range and whether a UA change helps.
- * Usage: tsx src/probe.ts
+ * Usage: tsx src/probe.ts            (built-in targets)
+ *        PROBE_URLS="u1 u2" tsx src/probe.ts   (your own list)
  */
 const UAS: Record<string, string> = {
   radar: "ai-news-radar:ingest:v0 (AI news feed reader)",
@@ -11,7 +12,7 @@ const UAS: Record<string, string> = {
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
 };
 
-const TARGETS: Array<[label: string, url: string, ua: keyof typeof UAS]> = [
+const DEFAULT_TARGETS: Array<[label: string, url: string, ua: keyof typeof UAS]> = [
   ["reddit www rss / radar UA", "https://www.reddit.com/r/LocalLLaMA/top/.rss?t=day&limit=5", "radar"],
   ["reddit www rss / browser UA", "https://www.reddit.com/r/MachineLearning/top/.rss?t=day&limit=5", "browser"],
   ["reddit old rss / radar UA", "https://old.reddit.com/r/OpenAI/top/.rss?t=day&limit=5", "radar"],
@@ -24,6 +25,15 @@ const TARGETS: Array<[label: string, url: string, ua: keyof typeof UAS]> = [
 ];
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+// PROBE_URLS="url1 url2 …" (whitespace/comma separated) overrides the defaults;
+// PROBE_UA=browser switches the User-Agent for those.
+const custom = (process.env.PROBE_URLS ?? "")
+  .split(/[\s,]+/)
+  .map((u) => u.trim())
+  .filter((u) => u.length > 0);
+const customUa: keyof typeof UAS = process.env.PROBE_UA === "browser" ? "browser" : "radar";
+const TARGETS = custom.length > 0 ? custom.map((u): [string, string, keyof typeof UAS] => [u, u, customUa]) : DEFAULT_TARGETS;
 
 for (const [label, url, ua] of TARGETS) {
   const started = Date.now();

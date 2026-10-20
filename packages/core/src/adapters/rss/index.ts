@@ -212,6 +212,28 @@ const HOST_MIN_GAP_MS: Record<string, number> = {
 };
 const lastFetchAtByHost = new Map<string, number>();
 
+/**
+ * Hosts that answered 403 during this run. Reddit blocks some datacenter IP
+ * ranges outright ("403 Blocked") and the verdict is per IP, so every later
+ * feed on that host would fail the same way after a full pacing wait — a
+ * 16-feed sweep would burn ~9 minutes learning nothing. Paced hosts only.
+ */
+const blockedHosts = new Set<string>();
+
+/** Test hook: clear per-run host state. */
+export function resetHostStateForTests(): void {
+  lastFetchAtByHost.clear();
+  blockedHosts.clear();
+}
+
+function hostOf(url: string): string | null {
+  try {
+    return new URL(url).host;
+  } catch {
+    return null;
+  }
+}
+
 async function paceForHost(url: string): Promise<void> {
   let host: string;
   try {
@@ -234,6 +256,16 @@ function sleep(ms: number): Promise<void> {
 }
 
 async function fetchFeed(url: string, attempt = 0): Promise<Result<string, FetchError>> {
+  const host = hostOf(url);
+  if (host && blockedHosts.has(host)) {
+    return err(
+      new FetchError(
+        "http_status",
+        `host ${host} blocked this runner's IP earlier in the run (403); skipped without retry`,
+        { url, status: 403 },
+      ),
+    );
+  }
   await paceForHost(url);
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
@@ -260,6 +292,7 @@ async function fetchFeed(url: string, attempt = 0): Promise<Result<string, Fetch
       return fetchFeed(url, 1);
     }
     if (!res.ok) {
+      if (res.status === 403 && host && HOST_MIN_GAP_MS[host]) blockedHosts.add(host);
       return err(
         new FetchError("http_status", `feed responded ${res.status} ${res.statusText}`, {
           url,
