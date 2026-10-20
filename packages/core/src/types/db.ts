@@ -1,7 +1,7 @@
 /**
- * Snake_case row shapes matching supabase/migrations/0001_init.sql.
- * Used by the repositories and by apps/web when reading query results.
- * Keep in lockstep with the migration — the migration is the source of truth.
+ * Snake_case row shapes — the snapshot format (written by the ingest run,
+ * read by apps/web at build time). The SQL-flavored naming is historical:
+ * these started life as Postgres rows.
  */
 import type { Json } from "./item";
 
@@ -79,8 +79,7 @@ export interface NormalizedItemRow {
   status: string;
   created_at: string;
   // LLM enrichment columns — null until processed.
-  /** pgvector columns come back over PostgREST as a "[0.1,0.2,…]" string. */
-  embedding: string | null;
+  embedding: number[] | null;
   llm_summary: string | null;
   llm_enriched_at: string | null;
 }

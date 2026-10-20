@@ -1,18 +1,22 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import "./globals.css";
-import { createServerSupabase } from "../lib/supabase-server";
-import { fetchLatestRun } from "../lib/queries";
+import { getSnapshot } from "../lib/data";
+import { latestRun } from "../lib/queries";
+import { REPO_URL, SITE_NAME } from "../lib/site";
 import { NavLink } from "../components/NavLinks";
 import { RefreshTimer } from "../components/RefreshTimer";
 
 export const metadata: Metadata = {
-  title: "AI News Radar",
-  description: "Open-source AI news dashboard: 32 sources, clustered into stories",
+  title: SITE_NAME,
+  description:
+    "A daily radar of AI news: 32 free sources, classified into 7 kinds and clustered into stories. Static, open source, rebuilt every day.",
 };
 
 const NAV = [
   ["/", "Feed"],
+  ["/search", "Search"],
+  ["/stories", "Stories"],
   ["/trending", "Trending"],
   ["/tools", "Tools"],
   ["/tips", "Tips"],
@@ -20,13 +24,12 @@ const NAV = [
 ] as const;
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  // Latest run for the header timer — anon read, public data.
-  const supabase = createServerSupabase();
-  const { run } = await fetchLatestRun(supabase);
+  const snapshot = await getSnapshot();
+  const run = latestRun(snapshot);
 
   return (
     <html lang="en">
-      <body className="min-h-screen">
+      <body className="flex min-h-screen flex-col">
         <header className="sticky top-0 z-20 border-b border-border bg-bg/85 backdrop-blur">
           <div className="mx-auto flex max-w-5xl flex-wrap items-center gap-x-5 gap-y-1 px-4 py-2.5">
             <Link href="/" className="select-none">
@@ -55,7 +58,18 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             </div>
           </div>
         </header>
-        <main className="mx-auto w-full max-w-5xl px-4 py-5">{children}</main>
+        <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-5">{children}</main>
+        <footer className="border-t border-border">
+          <div className="mx-auto flex max-w-5xl flex-wrap items-center gap-x-4 gap-y-1 px-4 py-3 text-xs text-faint">
+            <span>{SITE_NAME}</span>
+            <span>·</span>
+            <a href={REPO_URL} className="hover:text-fg" target="_blank" rel="noreferrer">
+              Open source on GitHub
+            </a>
+            <span>·</span>
+            <span>Rebuilt daily by GitHub Actions · static site, no tracking</span>
+          </div>
+        </footer>
       </body>
     </html>
   );

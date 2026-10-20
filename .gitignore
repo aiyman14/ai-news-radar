@@ -12,9 +12,6 @@ out/
 *.tsbuildinfo
 next-env.d.ts
 
-# Supabase local dev
-supabase/.branches/
-supabase/.temp/
 
 # Environment / secrets — NEVER commit
 .env
@@ -60,3 +57,7 @@ Thumbs.db
 tmp/
 temp/
 *.local
+
+# Ingest output (rebuilt every run, never committed)
+data/
+apps/web/public/search-index.json

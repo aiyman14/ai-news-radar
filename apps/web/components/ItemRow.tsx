@@ -1,5 +1,5 @@
 import Link from "next/link";
-import type { FeedItem } from "../lib/queries";
+import type { ItemCard } from "../lib/item-card";
 import { formatEastern } from "../lib/time";
 import { kindChipClass, kindLabel } from "../lib/kinds";
 import { CHIP, CHIP_NEUTRAL } from "../lib/ui";
@@ -14,7 +14,7 @@ function asCount(value: unknown): number | null {
 }
 
 /** ▲score ★stars ♥likes — engagement keys vary by source; take best match. */
-function engagementBits(engagement: FeedItem["engagement"]): string[] {
+function engagementBits(engagement: ItemCard["engagement"]): string[] {
   if (!engagement) return [];
   const bits: string[] = [];
   const score = asCount(engagement.score) ?? asCount(engagement.trendingScore);
@@ -28,14 +28,15 @@ function engagementBits(engagement: FeedItem["engagement"]): string[] {
 
 /**
  * THE item card — the one row component used by Feed, Tools, Tips, story
- * members, and search results. Kind chip → kind-filtered feed;
- * tags/entities → filtered feed; 📚 chip → story page.
+ * members, and search results. Kind chip → kind feed; tags/entities →
+ * filtered search; 📚 chip → story page. Pure (no hooks), so it renders
+ * both at build time and inside the client-side search page.
  */
 export function ItemRow({
   item,
   showClusterChip = true,
 }: {
-  item: FeedItem;
+  item: ItemCard;
   showClusterChip?: boolean;
 }) {
   const engagement = engagementBits(item.engagement);
@@ -69,9 +70,9 @@ export function ItemRow({
         </h3>
         <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted">
           <Link
-            href={`/?kind=${item.kind}`}
+            href={`/kind/${item.kind}`}
             className={`${CHIP} ${kindChipClass(item.kind)}`}
-            title={`Filter feed to ${kindLabel(item.kind)}`}
+            title={`Show ${kindLabel(item.kind)} only`}
           >
             {kindLabel(item.kind)}
           </Link>
@@ -92,9 +93,9 @@ export function ItemRow({
           {item.tags.slice(0, MAX_TAGS).map((tag) => (
             <Link
               key={tag}
-              href={`/?tag=${encodeURIComponent(tag)}`}
+              href={`/search?tag=${encodeURIComponent(tag)}`}
               className="text-faint hover:text-accent"
-              title={`Filter feed to tag "${tag}"`}
+              title={`Search tag "${tag}"`}
             >
               #{tag}
             </Link>
@@ -102,9 +103,9 @@ export function ItemRow({
           {item.entities.slice(0, MAX_ENTITIES).map((entity) => (
             <Link
               key={entity}
-              href={`/?entity=${encodeURIComponent(entity)}`}
+              href={`/search?entity=${encodeURIComponent(entity)}`}
               className="text-faint hover:text-accent"
-              title={`Filter feed to entity "${entity}"`}
+              title={`Search entity "${entity}"`}
             >
               @{entity}
             </Link>

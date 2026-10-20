@@ -1,43 +1,28 @@
 # @radar/ingest — the ingestion runner
 
-Runs the pipeline: fetch → normalize → classify → score → dedup → persist,
-then the post-persist stages (LLM enrich → embed → cluster). Scheduled by
-`.github/workflows/ingest.yml` (every 12h + manual dispatch); also the local
-dev runner.
-
-## Local dev (against local Supabase — needs Docker)
+One stateless run: fetch → normalize → classify → score → dedup (within the
+run) → cluster, then serialize everything to `data/radar.json` for the web
+build. Scheduled daily by `.github/workflows/radar.yml`; also the local dev
+runner. No database, no credentials, nothing persists between runs.
 
 ```bash
-supabase start                      # boots local Postgres (Docker)
-supabase db reset                   # applies migrations + seed (32 sources + fake-fixture)
-# put the printed URL + service_role key into .env or export them:
-export SUPABASE_URL=http://127.0.0.1:54321
-export SUPABASE_SERVICE_ROLE_KEY=<from supabase start output>
-
-# end-to-end proof with the fake adapter (writes real rows):
-pnpm --filter @radar/ingest dev -- --source fake-fixture
-
-# scope any run to specific sources:
-INGEST_LIMIT_SOURCES=rss-openai pnpm --filter @radar/ingest dev
+pnpm --filter @radar/ingest dev                         # all 32 sources (~9 min, paced)
+pnpm --filter @radar/ingest dev -- --source rss-openai  # one source, fast
+pnpm --filter @radar/ingest dev -- --dry-run            # fake fixture, writes nothing
 ```
-
-## Without Docker / without a DB
-
-```bash
-pnpm --filter @radar/ingest dev -- --dry-run   # in-memory repos, fake adapter only
-```
-
-## Flags
 
 | Flag | Meaning |
 |---|---|
-| `--trigger cron\|manual` | recorded on the `ingestion_runs` row |
+| `--trigger cron\|manual` | recorded on the run row |
 | `--source a,b,c` | run only these slugs (includes disabled ones like `fake-fixture`) |
 | `--limit N` | cap items per source |
-| `--dry-run` | in-memory repos; nothing written |
-| `--recluster` | run ONLY the cluster stage over the recent window |
-| `--reenrich` | run ONLY the LLM enrich stage in backfill mode (capped per invocation) |
-| `--reembed` | run ONLY the embed stage in backfill mode |
+| `--out FILE` | snapshot path (default `<repo>/data/radar.json`) |
+| `--dry-run` | fake fixture only; nothing written |
 
-Failure policy: per-source errors land in `source_errors` and the run continues
-(`partial`). Exit code is non-zero only when the whole run `failed`.
+Env: `RADAR_SNAPSHOT` is the env twin of `--out`; `INGEST_LIMIT_SOURCES` of
+`--source`; `GITHUB_TOKEN` raises the releases adapter's rate limit; the
+`LLM_*` / `EMBEDDINGS_*` variables activate the optional intelligence stages
+(see the root README).
+
+Failure policy: a failing source is recorded and the run continues
+(`partial`). Exit code is non-zero only when every source failed.

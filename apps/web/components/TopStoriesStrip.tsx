@@ -17,8 +17,11 @@ export function TopStoriesStrip({
 
   return (
     <section aria-label="Top stories" className="mb-6">
-      <h2 className="mb-2 text-sm font-semibold uppercase tracking-wider text-faint">
+      <h2 className="mb-2 flex items-baseline gap-2 text-sm font-semibold uppercase tracking-wider text-faint">
         Top stories <span className="font-normal normal-case">· last {windowHours}h</span>
+        <Link href="/stories" className="ml-auto text-[11px] font-normal normal-case underline hover:text-fg">
+          all stories →
+        </Link>
       </h2>
       <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
         {stories.map((story) => (

@@ -1,10 +1,8 @@
 import Link from "next/link";
-import { createServerSupabase } from "../../lib/supabase-server";
-import { fetchTrending, type TrendingCount } from "../../lib/queries";
+import { getSnapshot } from "../../lib/data";
+import { trending, type TrendingCount } from "../../lib/queries";
 import { SectionHeader } from "../../components/SectionHeader";
 import { EmptyState } from "../../components/EmptyState";
-
-export const dynamic = "force-dynamic";
 
 /** ▲/▼ vs the previous equal window. */
 function Delta({ delta }: { delta: number }) {
@@ -28,7 +26,7 @@ function TrendList({
           <Link
             href={hrefFor(name)}
             className="min-w-0 truncate text-fg hover:text-accent"
-            title={`Show matching feed items`}
+            title="Show matching items"
           >
             {name}
           </Link>
@@ -44,12 +42,12 @@ function TrendList({
 
 /**
  * Trending topics & entities over 24/48/72h, each with a delta vs the
- * previous equal window. Names click through to the filtered feed
- * (`/?tag=` / `/?entity=`). Aggregation strategy documented on fetchTrending.
+ * previous equal window. Names click through to the filtered search.
  */
 export default async function TrendingPage() {
-  const supabase = await createServerSupabase();
-  const { windows, error } = await fetchTrending(supabase);
+  const snapshot = await getSnapshot();
+  const windows = trending(snapshot);
+  const empty = windows.every((w) => w.tags.length === 0 && w.entities.length === 0);
 
   return (
     <section>
@@ -57,29 +55,24 @@ export default async function TrendingPage() {
         title="Trending"
         description="Top topics and entities per window · ▲▼ vs the previous equal window"
       />
-      {error && <p className="text-sm text-kind-opinion">Error: {error}</p>}
-      <div className="grid gap-4 md:grid-cols-3">
-        {windows.map(({ hours, tags, entities }) => (
-          <div key={hours} className="rounded-lg border border-border bg-surface p-4">
-            <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-faint">
-              Last {hours}h
-            </h2>
-            <h3 className="mb-1 text-xs font-medium text-muted">Topics</h3>
-            <div className="mb-3">
-              <TrendList
-                entries={tags}
-                hrefFor={(name) => `/?tag=${encodeURIComponent(name)}`}
-              />
+      {empty && <EmptyState title="No trending data yet" />}
+      {!empty && (
+        <div className="grid gap-4 md:grid-cols-3">
+          {windows.map(({ hours, tags, entities }) => (
+            <div key={hours} className="rounded-lg border border-border bg-surface p-4">
+              <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-faint">
+                Last {hours}h
+              </h2>
+              <h3 className="mb-1 text-xs font-medium text-muted">Topics</h3>
+              <div className="mb-3">
+                <TrendList entries={tags} hrefFor={(name) => `/search?tag=${encodeURIComponent(name)}`} />
+              </div>
+              <h3 className="mb-1 text-xs font-medium text-muted">Entities</h3>
+              <TrendList entries={entities} hrefFor={(name) => `/search?entity=${encodeURIComponent(name)}`} />
             </div>
-            <h3 className="mb-1 text-xs font-medium text-muted">Entities</h3>
-            <TrendList
-              entries={entities}
-              hrefFor={(name) => `/?entity=${encodeURIComponent(name)}`}
-            />
-          </div>
-        ))}
-      </div>
-      {!error && windows.length === 0 && <EmptyState title="No trending data yet" />}
+          ))}
+        </div>
+      )}
     </section>
   );
 }

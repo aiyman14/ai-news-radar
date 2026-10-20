@@ -1,14 +1,17 @@
 import { KINDS } from "./kinds";
 
 /**
- * URL-driven feed state. ALL search/filter state lives
- * in the query string — shareable, back-button-safe. This module is pure
- * (usable from server and client components): parse searchParams → FeedParams,
- * and build hrefs for toggles/removals.
+ * URL-driven search state. ALL search/filter state lives in the query
+ * string of /search — shareable, back-button-safe, and resolved entirely in
+ * the browser (the site is static HTML). This module is pure (usable from
+ * server and client components): parse searchParams → FeedParams, and build
+ * hrefs for toggles/removals.
  *
- * Params: q · kind (comma-separated multi) · source (uuid) · range
+ * Params: q · kind (comma-separated multi) · source (slug) · range
  * (24h|48h|72h|7d) · img=1 · clustered=1 · tag · entity · page
  */
+
+export const SEARCH_PATH = "/search";
 
 export type RawSearchParams = Record<string, string | string[] | undefined>;
 
@@ -42,7 +45,12 @@ function first(value: string | string[] | undefined): string {
   return (Array.isArray(value) ? value[0] : value)?.trim() ?? "";
 }
 
-export function parseFeedParams(raw: RawSearchParams): FeedParams {
+export function parseFeedParams(raw: RawSearchParams | URLSearchParams): FeedParams {
+  if (raw instanceof URLSearchParams) {
+    const obj: RawSearchParams = {};
+    for (const [k, v] of raw.entries()) obj[k] = v;
+    raw = obj;
+  }
   const kindsRaw = Array.isArray(raw.kind) ? raw.kind.join(",") : (raw.kind ?? "");
   const kinds = kindsRaw
     .split(",")
@@ -63,7 +71,7 @@ export function parseFeedParams(raw: RawSearchParams): FeedParams {
 }
 
 /**
- * Build a feed href from params + overrides. Any filter change resets the
+ * Build a /search href from params + overrides. Any filter change resets the
  * page (override `page` explicitly for pagination links).
  */
 export function feedHref(params: FeedParams, overrides: Partial<FeedParams> = {}): string {
@@ -79,7 +87,7 @@ export function feedHref(params: FeedParams, overrides: Partial<FeedParams> = {}
   if (p.entity) search.set("entity", p.entity);
   if (p.page > 1) search.set("page", String(p.page));
   const qs = search.toString();
-  return qs ? `/?${qs}` : "/";
+  return qs ? `${SEARCH_PATH}?${qs}` : SEARCH_PATH;
 }
 
 /** Toggle one kind in the multi-select chip row. */

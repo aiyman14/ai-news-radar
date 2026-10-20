@@ -68,9 +68,21 @@ export { scoreItem } from "./pipeline/score";
 // providers
 export * from "./providers/index";
 
-// db
-export { createServiceClient } from "./db/client";
+// sources (the source table lives in code)
+export { SOURCES, findSource } from "./sources";
+
+// persistence: in-memory repositories + the snapshot the web build reads
 export * from "./db/repositories/index";
+export {
+  buildSnapshot,
+  emptySnapshot,
+  readSnapshotFile,
+  writeSnapshotFile,
+  BODY_TEXT_MAX_CHARS,
+  DEFAULT_WINDOW_DAYS,
+  type Snapshot,
+  type SnapshotOptions,
+} from "./db/snapshot";
 
 // util
 export { sha256Hex, contentHash } from "./util/hash";

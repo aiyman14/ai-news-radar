@@ -36,13 +36,11 @@ jobs:
       - name: Tests
         run: pnpm -r test
 
-      - name: Web build
+      - name: Ingest smoke (fake fixture → data/radar.json)
+        run: pnpm --filter @radar/ingest dev -- --source fake-fixture
+
+      - name: Web build (static export from the smoke snapshot)
         run: pnpm --filter @radar/web build
-        env:
-          # Build-time placeholders: every page is server-rendered on demand,
-          # so no query runs at build; real values come from the host's env.
-          NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:54321
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: build-placeholder-anon-key
 
   secret-scan:
     runs-on: ubuntu-latest

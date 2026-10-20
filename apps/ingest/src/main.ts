@@ -2,21 +2,17 @@
  * Ingestion CLI — the GitHub Actions entrypoint (and local dev runner).
  *
  * Flags:
- *   --trigger cron|manual   run record trigger (default manual)
+ *   --trigger cron|manual   recorded on the run row (default manual)
  *   --source a,b,c          limit to specific slugs (also runs disabled
  *                           sources, e.g. fake-fixture)
  *   --limit N               cap items per source
- *   --dry-run               in-memory repos; nothing written to the DB
- *   --recluster             run ONLY the post-persist cluster stage over the
- *                           recent window (no fetching; requires the DB)
- *   --reenrich              run ONLY the LLM enrich stage in BACKFILL mode:
- *                           sweep ALL unenriched items (no window), capped
- *                           by LLM_MAX_ITEMS_PER_RUN per invocation
- *   --reembed               run ONLY the embed stage in backfill mode
- *                           (same contract as --reenrich)
+ *   --out FILE              snapshot path (default <repo>/data/radar.json)
+ *   --dry-run               run the fake fixture only; write nothing
  *
- * Env: SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY (not needed for --dry-run),
+ * Env: RADAR_SNAPSHOT as the env twin of --out,
+ *      RADAR_WINDOW_DAYS freshness window for the snapshot (default 14; 0 = all),
  *      INGEST_LIMIT_SOURCES as a fallback for --source,
+ *      GITHUB_TOKEN (optional) raises the releases adapter's rate limit,
  *      LLM_PROVIDER / EMBEDDINGS_PROVIDER (+keys) for enrich/embed stages
  *      — unset means those stages log a notice and skip.
  */
@@ -27,17 +23,13 @@ function parseArgs(argv: string[]): {
   sources: string[];
   limit: number | undefined;
   dryRun: boolean;
-  recluster: boolean;
-  reenrich: boolean;
-  reembed: boolean;
+  out: string | undefined;
 } {
   let trigger: "cron" | "manual" = "manual";
   let sources: string[] = [];
   let limit: number | undefined;
   let dryRun = false;
-  let recluster = false;
-  let reenrich = false;
-  let reembed = false;
+  let out: string | undefined;
 
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
@@ -60,17 +52,14 @@ function parseArgs(argv: string[]): {
         limit = v;
         break;
       }
+      case "--out": {
+        const v = argv[++i];
+        if (!v) throw new Error("--out requires a file path");
+        out = v;
+        break;
+      }
       case "--dry-run":
         dryRun = true;
-        break;
-      case "--recluster":
-        recluster = true;
-        break;
-      case "--reenrich":
-        reenrich = true;
-        break;
-      case "--reembed":
-        reembed = true;
         break;
       case "--": // pnpm forwards the separator literally — ignore it
         break;
@@ -79,22 +68,19 @@ function parseArgs(argv: string[]): {
     }
   }
 
-  // Env fallback for source scoping (plan §10 dev knob).
+  // Env fallback for source scoping.
   if (sources.length === 0 && process.env.INGEST_LIMIT_SOURCES) {
     sources = process.env.INGEST_LIMIT_SOURCES.split(",").map((s) => s.trim()).filter(Boolean);
   }
 
-  return { trigger, sources, limit, dryRun, recluster, reenrich, reembed };
+  return { trigger, sources, limit, dryRun, out };
 }
 
-const args = parseArgs(process.argv.slice(2));
-
-run(args)
+run(parseArgs(process.argv.slice(2)))
   .then((summary) => {
-    // 'partial' is an operational state, not a CI failure (plan §10).
-    // Stage-only runs (--recluster etc.) return no RunSummary;
-    // reaching here means success.
-    process.exitCode = summary !== null && summary.status === "failed" ? 1 : 0;
+    // 'partial' is an operational state, not a CI failure: some sources
+    // failed, the rest were ingested and the snapshot was written.
+    process.exitCode = summary.status === "failed" ? 1 : 0;
   })
   .catch((e) => {
     console.error("ingest crashed:", e instanceof Error ? e.message : e);

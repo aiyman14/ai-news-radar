@@ -3,10 +3,12 @@
 import { useEffect, useState } from "react";
 
 /**
- * Header refresh countdown. Ingestion runs at 00:00 and
- * 12:00 UTC (GH Actions cron) — count down to the next one, ticking.
- * Last-run info is server-fetched (layout) and passed in.
+ * Header refresh countdown. The radar is rebuilt once a day by the
+ * GitHub Actions cron (REFRESH_HOUR_UTC) — count down to the next one.
+ * Last-run info comes from the snapshot at build time.
  */
+export const REFRESH_HOUR_UTC = 6;
+
 export interface LastRunInfo {
   started_at: string;
   finished_at: string | null;
@@ -14,11 +16,11 @@ export interface LastRunInfo {
   items_new: number;
 }
 
-/** Next of 00:00 / 12:00 UTC after `now`. */
+/** Next REFRESH_HOUR_UTC after `now`. */
 function nextRefreshUtc(now: Date): Date {
   const next = new Date(now);
-  next.setUTCMinutes(0, 0, 0);
-  next.setUTCHours(now.getUTCHours() < 12 ? 12 : 24);
+  next.setUTCHours(REFRESH_HOUR_UTC, 0, 0, 0);
+  if (next.getTime() <= now.getTime()) next.setUTCDate(next.getUTCDate() + 1);
   return next;
 }
 
@@ -39,7 +41,7 @@ function formatRelative(iso: string, now: Date): string {
 }
 
 export function RefreshTimer({ lastRun }: { lastRun: LastRunInfo | null }) {
-  // Clock starts on mount (SSR renders a placeholder → no hydration mismatch).
+  // Clock starts on mount (the static HTML carries a placeholder → no hydration mismatch).
   const [now, setNow] = useState<Date | null>(null);
   useEffect(() => {
     setNow(new Date());
@@ -55,8 +57,8 @@ export function RefreshTimer({ lastRun }: { lastRun: LastRunInfo | null }) {
       <div className="text-muted">Next refresh in {remaining}</div>
       {lastRun && (
         <div>
-          Last: {now ? formatRelative(lastRun.finished_at ?? lastRun.started_at, now) : "…"} ·{" "}
-          {lastRun.items_new} new{" "}
+          Updated {now ? formatRelative(lastRun.finished_at ?? lastRun.started_at, now) : "…"} ·{" "}
+          {lastRun.items_new} items{" "}
           <span
             className={runOk ? "text-kind-tool" : "text-kind-tip"}
             title={`Last run status: ${lastRun.status}`}

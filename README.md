@@ -1,62 +1,46 @@
 # AI News Radar
 
-An open-source AI-news dashboard. It ingests **32 free sources** every 12 hours,
-normalizes and classifies everything into **7 content kinds**, deduplicates,
-clusters related coverage into **stories**, scores them, and serves a fast,
-public, read-only dashboard — no accounts, no tracking, no paywalls.
+**Live: https://aiyman14.github.io/ai-news-radar/**
 
-> **Status: working, work-in-progress.** The pipeline, clustering, and
-> dashboard are functional end-to-end and covered by tests. The visual design
-> is a deliberate token-based placeholder awaiting a proper design pass, and
-> the LLM enrichment layer ships dormant (bring your own key). See
-> [TODO.md](TODO.md) for the roadmap.
+A daily radar of what's happening in AI. Every morning a GitHub Actions job
+pulls **32 free sources** (lab blogs, research newsletters, 16 subreddits,
+Hugging Face trending, GitHub releases, Product Hunt), classifies every item
+into one of **7 kinds**, deduplicates, clusters related coverage into
+**stories**, scores them, and publishes the result as a static site.
 
-## Architecture
+No server. No database. No accounts, tracking or API keys. The only
+infrastructure is this repository.
+
+![radar workflow](https://github.com/aiyman14/ai-news-radar/actions/workflows/radar.yml/badge.svg)
+![ci](https://github.com/aiyman14/ai-news-radar/actions/workflows/ci.yml/badge.svg)
+
+## How it works
 
 ```
-              ┌──────────────────────────────────────────────────┐
-              │                sources (32 seeded)               │
-              │  subreddit Atom · lab/media RSS · HF trending    │
-              │  GitHub releases · Product Hunt (keyword-filter) │
-              └───────────────────────┬──────────────────────────┘
-                                      │ adapters (pacing, retry,
-                                      │ typed Result errors)
-                                      ▼
-   ingest CLI ──► fetch ─► normalize ─► classify ─► score ─► dedup ─► persist
- (GH Actions cron)                                                      │
-                                                                        ▼
-                                              ┌─────────────── Postgres (Supabase)
-                                              │   raw_items · normalized_items
-                                              │   story_clusters · runs · errors
-                                              ▼
-                    post-persist stages: enrich (LLM) ─► embed (pgvector)
-                                         ─► cluster (title-shingle Jaccard)
-                                              │
-                                              ▼
-                     Next.js dashboard (public read via anon key + RLS)
-                     feed · kind tabs · search · filters · top stories
-                     trending · story pages · source health
+  GitHub Actions cron (06:00 UTC daily)
+  │
+  ├─ 1. ingest ─ fetch 32 sources ─► normalize ─► classify (7 kinds)
+  │              ─► score ─► dedup ─► cluster (title-shingle Jaccard) ─► data/radar.json
+  │
+  ├─ 2. build ──  Next.js static export reads the snapshot ─► out/
+  │               feed · kind pages · top stories · trending · story pages
+  │               · source health · a browser-side search index
+  │
+  └─ 3. publish ─ out/ → gh-pages branch → GitHub Pages
 ```
 
-**Design principles**
+Everything is stateless: the sources are the database, and today's radar
+simply replaces yesterday's. Search and filters run in the browser over a
+small JSON index, so the published site is plain HTML plus one data file.
 
-- **Errors are data.** Expected failures (a feed 404s, a payload won't parse)
-  are typed `Result` values recorded to `source_errors`; the run continues.
-  `throw` is reserved for bugs and misconfiguration.
-- **Idempotent everywhere.** Dedup is keyed on `(source_id, external_id)`;
-  clustering fully recomputes cluster upkeep so re-runs converge; enrichment
-  is processed-once keyed on null columns.
-- **Two-layer access.** RLS is ON for every table with anon `SELECT` policies
-  plus matching table grants; the only writer is the ingestion job's service
-  role. The web app never touches a privileged key.
-- **Dependency-absent design.** The LLM layer was built and tested against
-  deterministic fake providers — adding a real API key activates it with
-  zero code changes.
+## What's in the pipeline
 
-## The 7 kinds + clustering
+**Adapters** turn each source type (RSS/Atom, the Hugging Face API, GitHub
+releases) into a common item shape. Failures are typed `Result` values, not
+exceptions: a feed that 404s is recorded and the run continues.
 
-Every item is classified into one of seven kinds by a deterministic
-keyword/heuristic classifier (an optional LLM pass can refine it):
+**Classification** assigns one of seven kinds with a deterministic
+keyword/heuristic classifier, using the source's typical kind as a prior:
 
 | kind | what it captures |
 |---|---|
@@ -68,76 +52,58 @@ keyword/heuristic classifier (an optional LLM pass can refine it):
 | `research` | papers, technical results |
 | `opinion` | essays, hot takes |
 
-Related coverage is clustered into **stories**: titles are word-shingled and
-compared with Jaccard similarity (threshold 0.4, calibrated against real
-data) over a 72-hour window, grouped with union-find, and merged when new
-items bridge existing clusters. Each cluster keeps a representative item,
-aggregate tags/entities, and a recency/engagement-aware score. An optional
-semantic assist blends embedding cosine similarity in once live embeddings
-exist.
+**Clustering** groups related coverage into stories: titles are
+word-shingled (3-grams) and compared with Jaccard similarity over a 72-hour
+window, grouped with union-find. The 0.4 threshold was calibrated against a
+real corpus (cross-source duplicates at 1.0, release families at 0.4–0.7,
+first false positives below 0.3). Each story keeps a representative item,
+aggregate tags/entities and a recency/engagement-aware score.
+
+**Trending** counts tags and entities over 24/48/72h windows and reports the
+delta against the previous equal window.
+
+**Optional LLM layer.** Per-item summaries and embeddings are built and
+tested against deterministic fake providers and ship dormant; setting
+`LLM_PROVIDER` + a key activates them with no code changes.
 
 ## Stack
 
 | Layer | Choice |
 |---|---|
 | Language | TypeScript (strict), pnpm monorepo |
-| Pipeline | `@radar/core` — adapters, stages, repositories |
-| Ingestion | `@radar/ingest` CLI, GitHub Actions cron (every 12h) |
-| Database | Supabase Postgres (RLS, FTS, pg_trgm, pgvector) |
-| Web | Next.js App Router (server components), Tailwind design tokens |
-| LLM (optional) | Anthropic / OpenAI generation · Voyage / OpenAI embeddings |
-| Tests | Vitest (137 tests), fixture-based adapter tests |
-| CI | typecheck + tests + build + gitleaks secret scan |
+| Pipeline | `@radar/core` — adapters, stages, in-memory repositories |
+| Ingestion | `@radar/ingest` CLI, one stateless run per day |
+| Web | Next.js App Router, static export, Tailwind design tokens |
+| Hosting | GitHub Pages, published by the same workflow |
+| Tests | Vitest, fixture-based adapter tests |
+| CI | typecheck + tests + smoke ingest + build + gitleaks secret scan |
 
 ## Run it locally
 
-Requires Node 20+ (22 recommended), pnpm, and Docker (for local Supabase).
+Requires Node 20+ and pnpm. Nothing else.
 
 ```bash
 pnpm install
-pnpm db:start                      # local Supabase stack; prints URL + keys
-pnpm db:reset                      # applies the migration + seeds 32 sources
-export SUPABASE_URL=http://127.0.0.1:54321
-export SUPABASE_SERVICE_ROLE_KEY=<service_role key from db:start output>
-
-# prove the pipeline end-to-end with the fake fixture (writes real rows):
-pnpm --filter @radar/ingest dev -- --source fake-fixture
-
-# ingest a real source:
-pnpm --filter @radar/ingest dev -- --source rss-openai
-
-# run everything (a full sweep paces rate-limited hosts and takes ~9 min):
-pnpm --filter @radar/ingest dev
-
-# dashboard:
-export NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321
-export NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon key from db:start output>
-pnpm dev:web                       # → http://localhost:3000
+pnpm ingest -- --source rss-openai,rss-deepmind   # a few sources, seconds
+pnpm ingest                                        # all 32 (~9 min, paced for rate limits)
+pnpm dev:web                                       # → http://localhost:3000
 ```
 
-Checks: `pnpm -r typecheck` · `pnpm -r test`.
+`pnpm -r typecheck` · `pnpm -r test` · `pnpm build:web` (static export in `apps/web/out`).
 
-## LLM enrichment: bring your own key
+## Layout
 
-The intelligence layer is **dormant by default** — every stage skips
-gracefully with a logged notice when unconfigured. To activate (Anthropic or
-OpenAI for generation; Voyage or OpenAI for embeddings):
-
-```bash
-LLM_PROVIDER=anthropic  ANTHROPIC_API_KEY=...   # per-item summaries
-EMBEDDINGS_PROVIDER=voyage  VOYAGE_API_KEY=...  # 1024-dim pgvector embeddings
 ```
-
-Runs are capped by `LLM_MAX_ITEMS_PER_RUN` (default 400), items are
-processed once, and `--reenrich` / `--reembed` backfill an existing corpus.
-Providers are plain-fetch implementations behind one interface — swapping
-vendors is configuration, not a refactor.
+apps/ingest     the CLI the workflow runs
+apps/web        the dashboard (static export)
+packages/core   sources, adapters, pipeline stages, repositories, snapshot
+data/           radar.json — written by ingest, read by the build (gitignored)
+```
 
 ## Roadmap
 
-See [TODO.md](TODO.md): live demo deployment, visual design pass, LLM
-activation + semantic calibration, semantic search UI, more sources
-(arXiv, Hacker News).
+See [TODO.md](TODO.md): design pass, more sources (arXiv, Hacker News),
+optional LLM summaries.
 
 ## License
 
