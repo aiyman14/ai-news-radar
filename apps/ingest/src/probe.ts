@@ -55,3 +55,5 @@ for (const [label, url, ua] of TARGETS) {
   }
   if (url.includes("reddit")) await sleep(12_000);
 }
+
+export {};
