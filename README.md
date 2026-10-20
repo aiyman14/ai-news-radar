@@ -2,113 +2,67 @@
 
 **Live: https://aiyman14.github.io/ai-news-radar/**
 
-A daily radar of what's happening in AI. Every morning a GitHub Actions job
-pulls **40 free sources** (lab blogs, tech media, research feeds, Hacker
-News, Lobsters, 16 subreddits, Hugging Face trending, GitHub releases,
-Product Hunt), classifies every item
-into one of **7 kinds**, deduplicates, clusters related coverage into
-**stories**, scores them, and publishes the result as a static site.
+A daily radar of what's happening in AI. Once a day it pulls 40 free sources
+(lab blogs, tech media, research feeds, Hacker News, Lobsters, subreddits,
+Hugging Face trending, GitHub releases, Product Hunt), sorts everything into
+seven kinds, groups related coverage into stories, and publishes the result
+as a static site.
 
-No server. No database. No accounts, tracking or API keys. The only
-infrastructure is this repository.
+No server, no database, no accounts, no tracking, no API keys. The whole
+thing runs on GitHub: Actions does the work, Pages serves the result.
 
-![radar workflow](https://github.com/aiyman14/ai-news-radar/actions/workflows/radar.yml/badge.svg)
+![radar](https://github.com/aiyman14/ai-news-radar/actions/workflows/radar.yml/badge.svg)
 ![ci](https://github.com/aiyman14/ai-news-radar/actions/workflows/ci.yml/badge.svg)
+
+## What it does
+
+- **Feed** of the last 14 days across every source, with kind tabs and paging.
+- **Stories** where several sources cover the same thing, with a score and the
+  full coverage list.
+- **Trending** topics and entities over 24/48/72 hours, with the change
+  against the previous window.
+- **Search** and filters (kind, source, date range, tag, entity) that run in
+  the browser.
+- **Tools**, **Tips** and **Sources** views, the last one showing what each
+  source delivered in the latest run.
+
+Items are classified into `news`, `launch`, `tool`, `tip`, `discussion`,
+`research` or `opinion` by a deterministic keyword classifier that uses each
+source's usual kind as a prior.
 
 ## How it works
 
 ```
-  GitHub Actions cron (06:00 UTC daily)
-  │
-  ├─ 1. ingest ─ fetch 40 sources ─► normalize ─► classify (7 kinds)
-  │              ─► score ─► dedup ─► cluster (title-shingle Jaccard) ─► data/radar.json
-  │
-  ├─ 2. build ──  Next.js static export reads the snapshot ─► out/
-  │               feed · kind pages · top stories · trending · story pages
-  │               · source health · a browser-side search index
-  │
-  └─ 3. publish ─ out/ → gh-pages branch → GitHub Pages
+GitHub Actions, 06:00 UTC daily
+│
+├─ ingest   fetch 40 sources → normalize → classify → score → dedup → cluster
+│           everything in memory, then one JSON snapshot (14-day window)
+│
+├─ build    Next.js static export reads the snapshot → plain HTML
+│           plus a small JSON index for browser-side search
+│
+└─ publish  out/ → gh-pages branch → GitHub Pages
 ```
 
-Everything is stateless: the sources are the database, and today's radar
-simply replaces yesterday's. Search and filters run in the browser over a
-small JSON index, so the published site is plain HTML plus one data file.
+Each run is stateless: the sources are the database, and today's radar
+replaces yesterday's. A feed that fails is recorded and skipped; the run goes
+on. Reddit blocks some GitHub runner IPs, so the subreddit feeds are
+best-effort and the radar is designed to be complete without them.
 
-## What's in the pipeline
-
-**Adapters** turn each source type (RSS/Atom, the Hugging Face API, GitHub
-releases) into a common item shape. Failures are typed `Result` values, not
-exceptions: a feed that 404s is recorded and the run continues. Reddit
-blocks some GitHub runner IP ranges outright, so the subreddit feeds are
-best-effort: when one answers 403 the rest are skipped in milliseconds and
-the radar ships without them that day. A `probe` workflow checks any feed
-URL from a runner on demand.
-
-**Classification** assigns one of seven kinds with a deterministic
-keyword/heuristic classifier, using the source's typical kind as a prior:
-
-| kind | what it captures |
-|---|---|
-| `news` | announcements, funding, industry events |
-| `launch` | model/product releases |
-| `tool` | utilities, frameworks, apps |
-| `tip` | tutorials, how-tos, practical guidance |
-| `discussion` | debates, community threads |
-| `research` | papers, technical results |
-| `opinion` | essays, hot takes |
-
-**Clustering** groups related coverage into stories: titles are
-word-shingled (3-grams) and compared with Jaccard similarity over a 72-hour
-window, grouped with union-find. The 0.4 threshold was calibrated against a
-real corpus (cross-source duplicates at 1.0, release families at 0.4–0.7,
-first false positives below 0.3). Each story keeps a representative item,
-aggregate tags/entities and a recency/engagement-aware score.
-
-**Trending** counts tags and entities over 24/48/72h windows and reports the
-delta against the previous equal window.
-
-**Optional LLM layer.** Per-item summaries and embeddings are built and
-tested against deterministic fake providers and ship dormant; setting
-`LLM_PROVIDER` + a key activates them with no code changes.
+**Stories** come from title similarity: titles are split into 3-word
+shingles and compared with Jaccard similarity over a 72-hour window; items
+above the 0.4 threshold (calibrated on real data) are grouped with
+union-find. Each story keeps a representative item, merged tags and entities,
+and a recency- and engagement-aware score.
 
 ## Stack
 
-| Layer | Choice |
-|---|---|
-| Language | TypeScript (strict), pnpm monorepo |
-| Pipeline | `@radar/core` — adapters, stages, in-memory repositories |
-| Ingestion | `@radar/ingest` CLI, one stateless run per day |
-| Web | Next.js App Router, static export, Tailwind design tokens |
-| Hosting | GitHub Pages, published by the same workflow |
-| Tests | Vitest, fixture-based adapter tests |
-| CI | typecheck + tests + smoke ingest + build + gitleaks secret scan |
-
-## Run it locally
-
-Requires Node 20+ and pnpm. Nothing else.
-
-```bash
-pnpm install
-pnpm ingest -- --source rss-openai,rss-deepmind   # a few sources, seconds
-pnpm ingest                                        # all 40 (a few minutes, paced for rate limits)
-pnpm dev:web                                       # → http://localhost:3000
-```
-
-`pnpm -r typecheck` · `pnpm -r test` · `pnpm build:web` (static export in `apps/web/out`).
-
-## Layout
-
-```
-apps/ingest     the CLI the workflow runs
-apps/web        the dashboard (static export)
-packages/core   sources, adapters, pipeline stages, repositories, snapshot
-data/           radar.json — written by ingest, read by the build (gitignored)
-```
-
-## Roadmap
-
-See [TODO.md](TODO.md): design pass, more sources (arXiv, Hacker News),
-optional LLM summaries.
+TypeScript monorepo (pnpm). `packages/core` holds the sources, adapters
+(RSS/Atom, Hugging Face API, GitHub releases), pipeline stages and tests;
+`apps/ingest` is the CLI the workflow runs; `apps/web` is the Next.js
+dashboard. CI runs typecheck, tests, a smoke ingest, the build, and a secret
+scan. An optional LLM layer (summaries, embeddings) ships dormant and
+activates with an API key.
 
 ## License
 
