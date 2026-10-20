@@ -1,0 +1,24 @@
+name: probe
+
+# Manual diagnostic: which source hosts are reachable from a GitHub runner,
+# and with which User-Agent. Prints one status line per target; nothing else.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Probe sources
+        run: pnpm --filter @radar/ingest exec tsx src/probe.ts
