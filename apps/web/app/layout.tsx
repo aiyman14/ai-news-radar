@@ -10,7 +10,7 @@ import { RefreshTimer } from "../components/RefreshTimer";
 export const metadata: Metadata = {
   title: SITE_NAME,
   description:
-    "A daily radar of AI news: 32 free sources, classified into 7 kinds and clustered into stories. Static, open source, rebuilt every day.",
+    "A daily radar of AI news: 40 free sources, classified into 7 kinds and clustered into stories. Static, open source, rebuilt every day.",
 };
 
 const NAV = [

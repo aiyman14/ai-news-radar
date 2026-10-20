@@ -19,6 +19,8 @@ import { matchesAiFilter } from "../../util/keywords";
  *   contentHash(title+body). Never empty.
  * - source.config.keyword_filter (Product Hunt global feed): when set, keeps
  *   only entries whose title/body matches util/keywords.ts matchesAiFilter().
+ * - source.config.max_items: when set, keeps at most that many entries
+ *   (after the keyword filter) — for firehose feeds like arXiv.
  * - Expected failures (HTTP >=400, timeout, malformed XML) => err(FetchError),
  *   never throws.
  */
@@ -398,9 +400,14 @@ export const rssAdapter: SourceAdapter = {
     let entries = parsed.value;
     const total = entries.length;
 
-    // Product Hunt global-feed case: keep only AI-relevant entries.
+    // Product Hunt / HN front-page case: keep only AI-relevant entries.
     if (source.config["keyword_filter"]) {
       entries = entries.filter((e) => matchesAiFilter(keywordMatchText(e)));
+    }
+    // Firehose feeds (arXiv lists hundreds of papers a day): keep the first N.
+    const maxItems = Number(source.config["max_items"]);
+    if (Number.isFinite(maxItems) && maxItems > 0) {
+      entries = entries.slice(0, maxItems);
     }
 
     ctx.logger.info("rss feed parsed", {

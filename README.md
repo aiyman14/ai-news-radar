@@ -3,8 +3,9 @@
 **Live: https://aiyman14.github.io/ai-news-radar/**
 
 A daily radar of what's happening in AI. Every morning a GitHub Actions job
-pulls **32 free sources** (lab blogs, research newsletters, 16 subreddits,
-Hugging Face trending, GitHub releases, Product Hunt), classifies every item
+pulls **40 free sources** (lab blogs, tech media, research feeds, Hacker
+News, Lobsters, 16 subreddits, Hugging Face trending, GitHub releases,
+Product Hunt), classifies every item
 into one of **7 kinds**, deduplicates, clusters related coverage into
 **stories**, scores them, and publishes the result as a static site.
 
@@ -19,7 +20,7 @@ infrastructure is this repository.
 ```
   GitHub Actions cron (06:00 UTC daily)
   │
-  ├─ 1. ingest ─ fetch 32 sources ─► normalize ─► classify (7 kinds)
+  ├─ 1. ingest ─ fetch 40 sources ─► normalize ─► classify (7 kinds)
   │              ─► score ─► dedup ─► cluster (title-shingle Jaccard) ─► data/radar.json
   │
   ├─ 2. build ──  Next.js static export reads the snapshot ─► out/
@@ -37,7 +38,11 @@ small JSON index, so the published site is plain HTML plus one data file.
 
 **Adapters** turn each source type (RSS/Atom, the Hugging Face API, GitHub
 releases) into a common item shape. Failures are typed `Result` values, not
-exceptions: a feed that 404s is recorded and the run continues.
+exceptions: a feed that 404s is recorded and the run continues. Reddit
+blocks some GitHub runner IP ranges outright, so the subreddit feeds are
+best-effort: when one answers 403 the rest are skipped in milliseconds and
+the radar ships without them that day. A `probe` workflow checks any feed
+URL from a runner on demand.
 
 **Classification** assigns one of seven kinds with a deterministic
 keyword/heuristic classifier, using the source's typical kind as a prior:
@@ -85,7 +90,7 @@ Requires Node 20+ and pnpm. Nothing else.
 ```bash
 pnpm install
 pnpm ingest -- --source rss-openai,rss-deepmind   # a few sources, seconds
-pnpm ingest                                        # all 32 (~9 min, paced for rate limits)
+pnpm ingest                                        # all 40 (a few minutes, paced for rate limits)
 pnpm dev:web                                       # → http://localhost:3000
 ```
 

@@ -6,7 +6,7 @@ build. Scheduled daily by `.github/workflows/radar.yml`; also the local dev
 runner. No database, no credentials, nothing persists between runs.
 
 ```bash
-pnpm --filter @radar/ingest dev                         # all 32 sources (~9 min, paced)
+pnpm --filter @radar/ingest dev                         # all 40 sources (paced)
 pnpm --filter @radar/ingest dev -- --source rss-openai  # one source, fast
 pnpm --filter @radar/ingest dev -- --dry-run            # fake fixture, writes nothing
 ```

@@ -4,8 +4,8 @@ import { isSourceType } from "../src/types/source";
 import { getAdapter } from "../src/adapters/registry";
 
 describe("SOURCES (the source table in code)", () => {
-  it("has 32 enabled sources plus the disabled fake fixture", () => {
-    expect(SOURCES.filter((s) => s.enabled)).toHaveLength(32);
+  it("has 40 enabled sources plus the disabled fake fixture", () => {
+    expect(SOURCES.filter((s) => s.enabled)).toHaveLength(40);
     const fake = findSource("fake-fixture");
     expect(fake?.enabled).toBe(false);
     expect(fake?.type).toBe("fake");

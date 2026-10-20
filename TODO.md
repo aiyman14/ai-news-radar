@@ -32,10 +32,12 @@ targeted component polish (typography scale, card density, mobile nav).
 
 ## 3. More sources
 
-- [ ] arXiv (cs.AI / cs.LG / cs.CL) — RSS adapter, kind `research`.
-- [ ] Hacker News — the `hn` adapter stub exists; front page + "Show HN"
-      filtered by AI keywords.
+- [x] arXiv cs.AI (RSS, capped at 40/day) and Hacker News front page
+      (AI-filtered) — added 2026-10-20 after probing reachability from runners.
 - [ ] Source audit: prune noisy feeds, tune per-source `trust_score`.
+- [ ] Reddit resilience: all 16 subreddit feeds fail on runners whose IP
+      Reddit has blocked (3 of 4 probed runs). Options if it matters: an
+      official Reddit API app, or a second runner job that retries Reddit only.
 
 ## 4. Optional intelligence (costs money; off by default)
 

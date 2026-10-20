@@ -243,6 +243,16 @@ describe("rssAdapter — expected failures return err(FetchError), never throw",
   });
 });
 
+describe("rssAdapter — max_items cap", () => {
+  it("keeps only the first max_items entries", async () => {
+    stubFetch(fixture("rss2.xml")); // 3 items
+    const result = await rssAdapter.fetch(source({ config: { max_items: 2 } }), ctx);
+    if (!result.ok) throw new Error(result.error.message);
+    expect(result.value).toHaveLength(2);
+    expect(result.value[0]?.externalId).toBe("news-gpt-6-001");
+  });
+});
+
 describe("rssAdapter — blocked host short-circuit", () => {
   it("after a 403 from a paced host, later feeds on that host fail fast without another request", async () => {
     const { resetHostStateForTests } = await import("../../../src/adapters/rss");
